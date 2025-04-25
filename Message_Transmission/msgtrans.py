@@ -6,9 +6,9 @@ import math
 import time
 from Initialization.network import initialize_network
 from Initialization.nodeStructure import SensorNode, SinkNode
-from simulate import simulate
-from malicious_node_management import forward_and_monitor  
-
+# from Message_Transmission.simulate import simulates
+from Message_Transmission.malicious_node_management import forward_and_monitor  # Importing the malicious detection function
+# ------------------ Helper Functions ------------------
 def euclidean_distance(loc1, loc2):
     return math.sqrt((loc1[0] - loc2[0]) ** 2 + (loc1[1] - loc2[1]) ** 2)
 
@@ -24,8 +24,9 @@ def decrypt(ciphertext):
     return ciphertext.replace("enc(", "").replace(")", "")
 
 def ET(d, L): 
-    return d * 0.1 + L * 0.01
+    return d * 0.1 + L * 0.01  # Simulated energy transmission cost
 
+# ------------------ Step 1 ------------------
 def step1_send_query(node_u, message, neighbor_nodes, Du):
     print("\n--- Step 1: Sending Queries ---")
     queries = {}
@@ -40,6 +41,8 @@ def step1_send_query(node_u, message, neighbor_nodes, Du):
             queries[v.node_id] = query
             print(f"Query sent from Node {node_u.node_id} to Node {v.node_id}: {query}")
     return queries
+
+# ------------------ Step 2 ------------------
 def step2_neighbors_respond(queries, sink_location, all_nodes):
     print("\n--- Step 2: Neighbors Responding ---")
     responses = {}
@@ -59,6 +62,7 @@ def step2_neighbors_respond(queries, sink_location, all_nodes):
         print(f"Response from Node {v.node_id}: {response}")
     return responses
 
+# ------------------ Step 3 ------------------
 def step3_decrypt_and_collect(responses, queries):
     print("\n--- Step 3: Decrypting and Collecting Responses ---")
     metrics = {}
@@ -74,6 +78,7 @@ def step3_decrypt_and_collect(responses, queries):
         print(f"Decrypted Data from Node {v_id}: {metrics[v_id]}")
     return metrics
 
+# ------------------ Step 4 ------------------
 def step4_select_relay(metrics, node_u, message, all_nodes, L, lambda_val=2):
     print("\n--- Step 4: Selecting Relay Node ---")
     IF_values = {}
@@ -94,6 +99,7 @@ def step4_select_relay(metrics, node_u, message, all_nodes, L, lambda_val=2):
     print(f"Selected Relay Node: {best_node} with IF value: {IF_values[best_node]}")
     return best_node
 
+# ------------------ Step 5 ------------------
 def step5_forward_message(message, selected_node_id):
     print("\n--- Step 5: Forwarding Message ---")
     new_message = message.copy()
@@ -101,11 +107,14 @@ def step5_forward_message(message, selected_node_id):
     print(f"Message forwarded to Node {selected_node_id}. Path so far: {new_message['path*']}")
     return new_message
 
+# ------------------ Message Transmission Simulation ------------------
 def simulate_message_transmission():
     print("\n--- Simulation Start ---")
+    
+    # Use the actual initialized network
     G, sensor_nodes, sink, positions = initialize_network()
     
-    source_node = list(sensor_nodes.values())[0] 
+    source_node = list(sensor_nodes.values())[0]  # Let's pick the first sensor node as the source for simplicity
     all_nodes = sensor_nodes.copy()
     all_nodes[sink.node_id] = sink
 
@@ -118,9 +127,23 @@ def simulate_message_transmission():
 
     current_node = source_node
     hop = 0
-    max_hops = sink.SM['PPK']['f'](len(sensor_nodes)) 
+    max_hops = sink.SM['PPK']['f'](len(sensor_nodes))  # Use the max hop calculator from PPK
+
     while hop < max_hops:
         print(f"\n--- Hop {hop + 1} ---")
+        print(f"Current Node: {current_node.node_id}")
+        
+        # ✅ Check if sink is within communication range
+        dist_to_sink = euclidean_distance(current_node.location, sink.location)
+        print(f"Distance to sink: {dist_to_sink}, Comm range: {current_node.communication_radius}")
+
+        if dist_to_sink <= current_node.communication_radius:
+            print(f"Sink is within range of Node {current_node.node_id}. Forwarding message to sink.")
+            message['path*'].append('sink')
+            print("Message reached the Sink Node!")
+            break  # ✅ Exit the loop after message is delivered
+
+        # ✅ Find neighbors (excluding already visited)
         neighbors = [
             node for node_id, node in all_nodes.items()
             if node_id != current_node.node_id and node_id not in message['path*']
@@ -154,15 +177,14 @@ def simulate_message_transmission():
         'sink': sink
     }
 
-# ------------------ Main Simulation Loop ------------------
-if __name__ == "__main__":
-    
-    # print(f"\n--- Transmission {i+1} ---")
-    result = simulate_message_transmission()
-    print("\n--- Simulation Complete ---")
-    print("Message transmission path:", result['message']['path*'])
-    print("Total hops:", result['message']['total_hops'])
-        
-        # Generate a random color for each transmission
-        # color = (random.random(), random.random(), random.random())  # RGB color
-    simulate(result['message']['path*'], result['sink'], result['all_nodes'], delay=1.5)
+# # ------------------ Main Simulation Loop ------------------
+# if __name__ == "__main__":
+#     for i in range(3):
+#         print(f"\n================== Transmitting share {i + 1} ==================")
+#         result = simulate_message_transmission()
+#         print("\n--- Simulation Complete ---")
+#         print("Message transmission path:", result['message']['path*'])
+#         print("Total hops:", result['message']['total_hops'])
+
+#         color = (random.random(), random.random(), random.random())  # RGB
+        # simulate(result['message']['path*'], result['sink'], result['all_nodes'], delay=1.5, color=color, share_number=i+1)
